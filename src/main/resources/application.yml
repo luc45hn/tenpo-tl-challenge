@@ -1,6 +1,10 @@
 spring:
   application:
     name: tenpo-tl-challenge
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:challenge}
+    username: ${POSTGRES_USER:challenge}
+    password: ${POSTGRES_PASSWORD:challenge}
   data:
     redis:
       host: localhost
@@ -18,3 +22,10 @@ percentage:
   retry:
     max-attempts: 3
     delay: 200ms
+
+history:
+  max-body-length: 10000
+  executor:
+    core-pool-size: 1
+    max-pool-size: 2
+    queue-capacity: 500
