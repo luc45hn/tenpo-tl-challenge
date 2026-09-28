@@ -1,35 +1,38 @@
 package com.tenpo.challenge.service;
 
+import com.tenpo.challenge.exception.PercentageUnavailableException;
+import io.vavr.control.Try;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 class CalculationServiceTest {
 
-    private final CalculationService service = new CalculationService();
+    private final PercentageService percentageService = mock(PercentageService.class);
+    private final CalculationService service = new CalculationService(percentageService);
 
-    @ParameterizedTest
-    @CsvSource({
-            "5, 5, 10",
-            "0, 0, 0",
-            "-3, 7, 4",
-            "0.1, 0.2, 0.3",
-            "123456789012345678901234567890, 1, 123456789012345678901234567891"
-    })
-    void calculateReturnsTheSumOfBothNumbers(String num1, String num2, String expected) {
-        BigDecimal result = service.calculate(new BigDecimal(num1), new BigDecimal(num2));
+    @Test
+    void appliesTheResolvedPercentageToTheSum() {
+        given(percentageService.getPercentage()).willReturn(Try.success(new BigDecimal("10")));
 
-        assertThat(result).isEqualByComparingTo(expected);
+        BigDecimal result = service.calculate(new BigDecimal("5"), new BigDecimal("5"));
+
+        assertThat(result).isEqualTo(new BigDecimal("11.00"));
     }
 
     @Test
-    void calculateIsExactForDecimals() {
-        BigDecimal result = service.calculate(new BigDecimal("0.1"), new BigDecimal("0.2"));
+    void throwsWhenThePercentageCannotBeObtained() {
+        ResourceAccessException cause = new ResourceAccessException("Connection refused");
+        given(percentageService.getPercentage()).willReturn(Try.failure(cause));
 
-        assertThat(result).isEqualTo(new BigDecimal("0.3"));
+        assertThatThrownBy(() -> service.calculate(new BigDecimal("5"), new BigDecimal("5")))
+                .isInstanceOf(PercentageUnavailableException.class)
+                .hasCause(cause);
     }
 }

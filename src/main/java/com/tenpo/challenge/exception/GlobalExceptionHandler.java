@@ -1,5 +1,7 @@
 package com.tenpo.challenge.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.validation.BindException;
@@ -16,6 +18,8 @@ import java.util.stream.Collectors;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private static final String INVALID_NUMBER_MESSAGE = "must be a valid number";
 
@@ -39,6 +43,19 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
         problem.setTitle("Invalid request parameters");
         problem.setProperty("errors", errors);
+        return problem;
+    }
+
+    /**
+     * Handles failures to obtain the percentage from the external service.
+     */
+    @ExceptionHandler(PercentageUnavailableException.class)
+    public ProblemDetail handlePercentageUnavailable(PercentageUnavailableException ex) {
+        log.warn("Percentage service unavailable", ex);
+
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+                "The percentage could not be obtained from the external service. Please try again later.");
+        problem.setTitle("Percentage service unavailable");
         return problem;
     }
 

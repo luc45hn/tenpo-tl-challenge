@@ -1,19 +1,31 @@
 package com.tenpo.challenge.service;
 
+import com.tenpo.challenge.exception.PercentageUnavailableException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 
 /**
- * Business logic of the calculation endpoint. Free of any web or DTO dependency.
+ * Orchestrates the calculation: resolves the percentage (effect) and applies it (pure).
+ * Free of any web or DTO dependency.
  */
 @Service
 public class CalculationService {
 
+    private final PercentageService percentageService;
+
+    public CalculationService(PercentageService percentageService) {
+        this.percentageService = percentageService;
+    }
+
     /**
-     * Pure function: returns the sum of both numbers, with no side effects.
+     * Adds both numbers and applies the current percentage.
+     *
+     * @throws PercentageUnavailableException if the percentage cannot be obtained
      */
     public BigDecimal calculate(BigDecimal num1, BigDecimal num2) {
-        return num1.add(num2);
+        BigDecimal percentage = percentageService.getPercentage()
+                .getOrElseThrow(PercentageUnavailableException::new);
+        return PercentageCalculator.applyPercentage(num1, num2, percentage);
     }
 }
