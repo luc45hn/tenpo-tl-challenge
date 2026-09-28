@@ -45,7 +45,7 @@ Functional summary:
 | Concurrency model | Classic Spring MVC (not WebFlux) | The 3 RPM limit makes reactive complexity unnecessary; full justification in the README |
 | Cache / Rate limiting | Redis from day one | Needed anyway to support multiple replicas; avoids a later refactor |
 | HTTP client | `RestClient` (Spring 6.1+) | Modern recommended replacement for `RestTemplate` (in maintenance mode); synchronous, consistent with classic MVC |
-| Retries | Declarative `@Retryable` (decide at slice 4 whether Spring Framework 7's built-in support makes the `spring-retry` dependency unnecessary; check official docs) | Declarative, cleaner than manual retry logic |
+| Retries | Small functional helper that retries a Vavr `Try` (no `spring-retry`, no annotations) | The client returns a `Try` and never throws, so exception-driven annotations do not fit; keeps the style consistent and testable without Spring |
 | History | PostgreSQL + Spring Data JPA | Explicit challenge requirement |
 | API documentation | springdoc-openapi (Swagger UI) | Explicit challenge requirement |
 | Error handling / functional style | **Vavr** (`Try`, `Either`) for failure-prone flows (external call, retries) | Author's background is Scala/functional; avoids nested try/catch |
@@ -73,6 +73,7 @@ com.tenpo.challenge
 ├── service         → Business logic (CalculationService, PercentageService, HistoryService)
 ├── client          → Mock external service client (PercentageClient)
 ├── cache           → PercentageCache port and its Redis implementation
+├── retry           → Functional helper that retries a Try-returning operation
 ├── repository      → Spring Data JPA (CallHistoryRepository)
 ├── model / entity  → JPA entities (CallHistory)
 ├── dto             → Request/Response DTOs (records)
@@ -137,6 +138,20 @@ com.tenpo.challenge
   is tested with an in-memory fake and a controllable clock. The Redis implementation is tested
   with Testcontainers, skipped automatically when Docker is not available. No distributed lock:
   with the global 3 RPM limit concurrent refreshes are irrelevant (mention in the README).
+
+## Retries
+
+- At most 3 attempts in total (the original call plus up to two retries), configurable in
+  `application.yml` (`percentage.retry.max-attempts`, default 3, at least 1), with a short fixed
+  pause between attempts (`percentage.retry.delay`, default 200ms).
+- Only transient failures are retried: connection errors, timeouts and 5xx responses. 4xx
+  responses and malformed or invalid bodies fail immediately, since repeating them cannot help.
+- Retries wrap the client call inside `PercentageService`, so they only happen when the cache is
+  not fresh. When the attempts are exhausted the existing fallback applies (stale entry,
+  otherwise the 503).
+- Implemented as a small Spring-free helper that retries a `Try`-returning operation given the
+  maximum attempts, a "should retry" predicate and a pause function. The pause is injected so
+  tests never sleep. Worst case wait: read timeout times attempts, plus the pauses.
 
 ## Docker Compose
 
