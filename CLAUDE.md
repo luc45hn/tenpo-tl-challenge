@@ -79,7 +79,7 @@ com.tenpo.challenge
 ├── filter          → Servlet filters (call history recording)
 ├── dto             → Request/Response DTOs (records)
 ├── exception       → Custom exceptions + global @ControllerAdvice
-└── ratelimit       → Rate limiting filter/interceptor (backed by Redis)
+└── ratelimit       → Rate limiting filter and the Redis-backed sliding window limiter
 ```
 
 ## Workflow (important)
@@ -175,6 +175,27 @@ com.tenpo.challenge
 - Query: `GET /api/v1/history?page=0&size=20`, newest first, maximum size 100 (an invalid page or
   size is a 400). It responds with the items and the paging metadata (page, size, total elements,
   total pages) in our own DTO, not Spring's `Page`.
+
+## Rate limiting
+
+- At most 3 requests per minute in total: a single global counter, not per client, applied to
+  every call under `/api/v1/**`, the history endpoint included. `/mock/**` is excluded. Invalid
+  requests count too, since they consume capacity. Limit and window are configurable in
+  `application.yml` (`ratelimit.max-requests`, default 3; `ratelimit.window`, default 1m).
+  Limiting per client or per IP would be the production approach (mention it in the README).
+- Sliding window log in Redis: a sorted set with one entry per accepted request, managed by a
+  single Lua script so the check and the insert are atomic across replicas. The script uses
+  Redis's own clock (`TIME`), not the application's, so replicas cannot disagree because of clock
+  skew. It reports whether the request is allowed and, when it is not, how long until the oldest
+  entry leaves the window.
+- Over the limit: 429 with an RFC 9457 problem detail and a descriptive message, plus a
+  `Retry-After` header in whole seconds. The filter delegates the error response to
+  `GlobalExceptionHandler` so the error format lives in one place.
+- The rate limiting filter runs right after the call history filter, which stays outermost, so
+  429 responses are recorded in the history too.
+- If Redis fails, requests are let through and a WARN is logged (availability over strictness,
+  consistent with the percentage cache). State this trade-off in the README: with Redis down the
+  limit is not enforced.
 
 ## Docker Compose
 
