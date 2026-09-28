@@ -11,6 +11,11 @@ spring:
       port: 6379
       connect-timeout: 1s
       timeout: 1s
+  web:
+    # Everything the API returns (e.g. validation messages) is in English, whatever the JVM
+    # default locale or the client's Accept-Language header
+    locale: en
+    locale-resolver: fixed
 
 percentage:
   client:

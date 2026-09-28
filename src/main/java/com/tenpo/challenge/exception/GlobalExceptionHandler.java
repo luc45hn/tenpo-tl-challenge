@@ -8,6 +8,8 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -35,15 +37,30 @@ public class GlobalExceptionHandler {
                         GlobalExceptionHandler::messageOf,
                         (first, ignored) -> first,
                         TreeMap::new));
+        return invalidParameters(errors);
+    }
 
-        String detail = errors.entrySet().stream()
-                .map(entry -> entry.getKey() + " " + entry.getValue())
-                .collect(Collectors.joining("; "));
+    /**
+     * Handles request parameters that violate their constraints (e.g. a page size above the
+     * maximum). Only the first error per parameter is reported.
+     */
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ProblemDetail handleMethodValidation(HandlerMethodValidationException ex) {
+        Map<String, String> errors = ex.getParameterValidationResults().stream()
+                .collect(Collectors.toMap(
+                        result -> result.getMethodParameter().getParameterName(),
+                        result -> result.getResolvableErrors().getFirst().getDefaultMessage(),
+                        (first, ignored) -> first,
+                        TreeMap::new));
+        return invalidParameters(errors);
+    }
 
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
-        problem.setTitle("Invalid request parameters");
-        problem.setProperty("errors", errors);
-        return problem;
+    /**
+     * Handles request parameters that cannot be converted to their type (e.g. a non-numeric page).
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ProblemDetail handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return invalidParameters(Map.of(ex.getName(), INVALID_NUMBER_MESSAGE));
     }
 
     /**
@@ -56,6 +73,17 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
                 "The percentage could not be obtained from the external service. Please try again later.");
         problem.setTitle("Percentage service unavailable");
+        return problem;
+    }
+
+    private static ProblemDetail invalidParameters(Map<String, String> errors) {
+        String detail = errors.entrySet().stream()
+                .map(entry -> entry.getKey() + " " + entry.getValue())
+                .collect(Collectors.joining("; "));
+
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+        problem.setTitle("Invalid request parameters");
+        problem.setProperty("errors", errors);
         return problem;
     }
 
