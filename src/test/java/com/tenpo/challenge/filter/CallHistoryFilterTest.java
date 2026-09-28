@@ -101,15 +101,33 @@ class CallHistoryFilterTest {
     }
 
     @Test
-    void recordsAnUnhandledExceptionAsInternalServerError() {
+    void recordsAnUnexpectedErrorAsInternalServerErrorWithItsProblemDetail() throws Exception {
         given(percentageService.getPercentage()).willThrow(new IllegalStateException("unexpected"));
 
-        assertThatThrownBy(() -> mockMvc.perform(get("/api/v1/calculate?num1=5&num2=5")))
-                .isInstanceOf(ServletException.class);
+        String body = mockMvc.perform(get("/api/v1/calculate?num1=5&num2=5"))
+                .andExpect(status().isInternalServerError())
+                .andReturn().getResponse().getContentAsString();
 
         CallHistory recorded = recordedCall();
         assertThat(recorded.status()).isEqualTo(500);
         assertThat(recorded.path()).isEqualTo("/api/v1/calculate");
+        assertThat(recorded.responseBody()).isEqualTo(body).contains("An unexpected error occurred");
+    }
+
+    @Test
+    void recordsAnExceptionThatEscapesTheChainAsInternalServerError() {
+        CallHistoryRecorder escapingRecorder = mock(CallHistoryRecorder.class);
+        CallHistoryFilter filter = new CallHistoryFilter(escapingRecorder, Clock.fixed(NOW, ZoneOffset.UTC), 10000);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/calculate");
+
+        assertThatThrownBy(() -> filter.doFilter(request, new MockHttpServletResponse(), (req, res) -> {
+            throw new ServletException("escaped every handler");
+        })).isInstanceOf(ServletException.class);
+
+        ArgumentCaptor<CallHistory> captor = ArgumentCaptor.forClass(CallHistory.class);
+        verify(escapingRecorder).record(captor.capture());
+        assertThat(captor.getValue().status()).isEqualTo(500);
+        assertThat(captor.getValue().path()).isEqualTo("/api/v1/calculate");
     }
 
     @Test
