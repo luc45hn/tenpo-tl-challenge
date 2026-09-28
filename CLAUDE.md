@@ -234,7 +234,32 @@ com.tenpo.challenge
 - The documented constraints and defaults must come from the real ones (validation annotations
   and controller defaults), so the documentation cannot drift.
 
+## Containerization
+
+- Docker Hub image: `lucashn81/tenpo-tl-challenge`.
+- Multi-stage Dockerfile: build stage with a JDK 21 image using the Maven wrapper, runtime stage
+  with a JRE 21 image, running as a non-root user. Tests are not run inside the build (they need
+  Testcontainers, which needs Docker); document running them separately in the README.
+- Built and published for both `linux/amd64` and `linux/arm64` (`docker buildx`), so it runs
+  natively regardless of the evaluator's machine.
+- Spring Boot Actuator is added with only the health endpoint exposed
+  (`management.endpoints.web.exposure.include: health`), used by the container healthcheck. It
+  lives outside `/api/v1`, so it is neither rate limited nor recorded in the call history.
+
 ## Docker Compose
+
+- Three services: `postgres`, `redis` (with a named volume and `--appendonly yes`, so the last
+  cached percentage survives a restart) and `api`, each with a healthcheck; `api` waits for the
+  other two to be healthy.
+- `api` declares both `image` (`lucashn81/tenpo-tl-challenge`) and `build: .`, so `docker compose
+  up` pulls the published image while `docker compose up --build` builds it locally.
+- `docker-compose.yml` does not publish the Postgres and Redis ports to the host, so it does not
+  collide with services the evaluator may already have running locally. A separate
+  `docker-compose.dev.yml` publishes those ports for local development, used as an override:
+  `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis`, then run
+  the app locally with `./mvnw spring-boot:run` as before (do not start the `api` service this
+  way, or it collides with the local one on port 8080).
+- Demo credentials with defaults baked into `docker-compose.yml`, noted as such in the README.
 
 Three services: `postgres`, `redis`, `api` (with healthchecks and corresponding `depends_on`).
 
