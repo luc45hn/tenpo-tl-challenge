@@ -1,0 +1,12 @@
+# Only the Maven wrapper, the pom and the sources are needed to build the image
+target/
+.git/
+.gitignore
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.md
+Dockerfile
+.dockerignore
+docker-compose*.yml

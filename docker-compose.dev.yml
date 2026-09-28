@@ -1,0 +1,15 @@
+# Local development override: publishes the Postgres and Redis ports to the host, so the
+# application can run outside Docker with `./mvnw spring-boot:run`.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis
+#
+# Start only postgres and redis this way: the api service would collide with the local
+# application on port 8080.
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  redis:
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
