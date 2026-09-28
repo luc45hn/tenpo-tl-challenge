@@ -197,6 +197,24 @@ com.tenpo.challenge
   consistent with the percentage cache). State this trade-off in the README: with Redis down the
   limit is not enforced.
 
+## Error handling
+
+- Every error response, whether from our code or from the framework, is an RFC 9457 problem
+  detail produced through `GlobalExceptionHandler`. It extends Spring's
+  `ResponseEntityExceptionHandler` so the standard MVC errors (404, 405, 406, 415, missing or
+  mistyped parameters) share the same format. Do not enable `spring.mvc.problemdetails`, which
+  would register a second advice.
+- Messages are descriptive and in English. Client errors (4xx) say what was wrong and, when it
+  helps, what is accepted (for example the allowed methods in a 405). Server errors (5xx) never
+  leak internals: no exception messages, class names, SQL or stack traces in the response.
+- Logging: 4xx at DEBUG (they are the client's problem), expected 5xx such as the unavailable
+  percentage service at WARN on one line with the root cause and no stack trace, and unexpected
+  5xx at ERROR with the full stack trace, once.
+- Anything unexpected ends as a generic 500 ("An unexpected error occurred"), so the call
+  history records it with a body too.
+- Known limitation for the README: errors Tomcat rejects before Spring sees the request (for
+  example a malformed URL) use Boot's default error format.
+
 ## Docker Compose
 
 Three services: `postgres`, `redis`, `api` (with healthchecks and corresponding `depends_on`).
