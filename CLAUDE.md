@@ -85,6 +85,11 @@ com.tenpo.challenge
   but do not assume architecture changes unless explicitly asked to.
 - **Short, precise, atomic commits.** One commit = one small, coherent functional unit.
   Conventional format: `feat:`, `test:`, `fix:`, `refactor:`, `docs:`, `chore:`.
+- **Never run git commands** (no add, commit, mv, reset, stash, restore, checkout, etc.). The
+  author handles all git operations. Rename files with plain `mv`. When a task is done, list the
+  files created or modified and propose commit messages, nothing more.
+- **Commit messages describe the change**, never the internal working vocabulary: no mentions of
+  slices, steps or numbering.
 - **Incremental tests, not at the end.** Every time a testable functional unit is completed
   (e.g. the simple calculation, the mock client, the cache, the retries, the history, the rate
   limiting), its corresponding tests are added in the same commit or the immediately following
@@ -93,7 +98,7 @@ com.tenpo.challenge
   1. Base endpoint + simple calculation (no cache, no external percentage)
   2. Mock external service (random decimal 5–20% percentage), its client, and applying the
      percentage to the calculation
-  3. Percentage cache in Redis with 30-minute TTL
+  3. Percentage cache in Redis (30-minute freshness, last known value as fallback)
   4. Retries on external service failure
   5. Asynchronous history + persistence in Postgres (with pagination)
   6. Distributed rate limiting (Redis)
@@ -114,6 +119,23 @@ com.tenpo.challenge
   only at the end. `CalculationService.calculate` stays a pure function that receives the
   already-resolved percentage; effects (HTTP call, later cache and retries) live in
   `PercentageService`.
+
+## Percentage cache (Redis)
+
+- The percentage is stored in Redis as a **single entry holding the value and the instant it was
+  fetched**, with no Redis expiry. Freshness (30 minutes, configurable in `application.yml`) is
+  decided in the application by comparing against an injected `Clock`, as a pure function. The
+  entry is kept after it stops being fresh so it can serve as the last known value.
+- Flow in `PercentageService`: fresh entry -> return it without calling the external service;
+  otherwise call the client; on success store and return; on failure return the stored entry even
+  if stale; with no entry at all, fail (the existing 503). Only successful fetches are stored.
+- Redis failures degrade gracefully: a failing read is treated as an empty cache and a failing
+  write is logged and ignored. The cache must never break the endpoint. Malformed entries are
+  treated as absent.
+- Storage sits behind a `PercentageCache` interface (Redis implementation) so the service logic
+  is tested with an in-memory fake and a controllable clock. The Redis implementation is tested
+  with Testcontainers, skipped automatically when Docker is not available. No distributed lock:
+  with the global 3 RPM limit concurrent refreshes are irrelevant (mention in the README).
 
 ## Docker Compose
 
