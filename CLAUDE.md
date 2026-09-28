@@ -72,6 +72,7 @@ com.tenpo.challenge
 ├── controller      → REST endpoints (CalculationController, HistoryController)
 ├── service         → Business logic (CalculationService, PercentageService, HistoryService)
 ├── client          → Mock external service client (PercentageClient)
+├── cache           → PercentageCache port and its Redis implementation
 ├── repository      → Spring Data JPA (CallHistoryRepository)
 ├── model / entity  → JPA entities (CallHistory)
 ├── dto             → Request/Response DTOs (records)
