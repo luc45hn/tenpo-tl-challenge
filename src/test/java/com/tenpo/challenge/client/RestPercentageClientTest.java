@@ -99,7 +99,7 @@ class RestPercentageClientTest {
         respondWith(200, "not json");
 
         assertThat(failureOf(clientFor(serverUri()).fetchPercentage()))
-                .isInstanceOf(RestClientException.class);
+                .isExactlyInstanceOf(RestClientException.class);
     }
 
     @Test
@@ -107,7 +107,7 @@ class RestPercentageClientTest {
         respondWith(200, "{\"percentage\":\"abc\"}");
 
         assertThat(failureOf(clientFor(serverUri()).fetchPercentage()))
-                .isInstanceOf(RestClientException.class);
+                .isExactlyInstanceOf(RestClientException.class);
     }
 
     @Test
@@ -124,6 +124,21 @@ class RestPercentageClientTest {
 
         assertThat(failureOf(clientFor(serverUri()).fetchPercentage()))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void failsWithoutThrowingWhenTheThreadIsInterrupted() {
+        respondWith(200, "{\"percentage\":12.34}");
+        PercentageClient client = clientFor(serverUri());
+        Thread.currentThread().interrupt();
+        try {
+            assertThat(failureOf(client.fetchPercentage()))
+                    .isInstanceOf(ResourceAccessException.class)
+                    .hasCauseInstanceOf(IOException.class);
+            assertThat(Thread.currentThread().isInterrupted()).isTrue();
+        } finally {
+            Thread.interrupted();
+        }
     }
 
     private static Throwable failureOf(Try<BigDecimal> result) {

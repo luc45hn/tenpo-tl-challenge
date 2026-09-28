@@ -4,6 +4,7 @@ import com.tenpo.challenge.cache.CachedPercentage;
 import com.tenpo.challenge.cache.PercentageCache;
 import com.tenpo.challenge.client.PercentageClient;
 import com.tenpo.challenge.config.PercentageCacheProperties;
+import com.tenpo.challenge.retry.Retrier;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
@@ -24,21 +25,23 @@ public class PercentageService {
 
     private final PercentageClient percentageClient;
     private final PercentageCache percentageCache;
+    private final Retrier retrier;
     private final Clock clock;
     private final Duration ttl;
 
-    public PercentageService(PercentageClient percentageClient, PercentageCache percentageCache, Clock clock,
-                             PercentageCacheProperties cacheProperties) {
+    public PercentageService(PercentageClient percentageClient, PercentageCache percentageCache, Retrier retrier,
+                             Clock clock, PercentageCacheProperties cacheProperties) {
         this.percentageClient = percentageClient;
         this.percentageCache = percentageCache;
+        this.retrier = retrier;
         this.clock = clock;
         this.ttl = cacheProperties.ttl();
     }
 
     /**
      * Returns the cached percentage while it is fresh. Otherwise fetches it from the external
-     * service and caches it; if that fails, falls back to the cached percentage even if stale,
-     * and only fails when there is none.
+     * service, retrying transient failures, and caches it; if that fails, falls back to the cached
+     * percentage even if stale, and only fails when there is none.
      */
     public Try<BigDecimal> getPercentage() {
         Option<CachedPercentage> cached = percentageCache.find();
@@ -49,7 +52,7 @@ public class PercentageService {
     }
 
     private Try<BigDecimal> fetchAndCache() {
-        return percentageClient.fetchPercentage()
+        return retrier.execute(percentageClient::fetchPercentage)
                 .peek(value -> percentageCache.save(new CachedPercentage(value, clock.instant())));
     }
 

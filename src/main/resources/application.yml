@@ -15,3 +15,6 @@ percentage:
     read-timeout: 2s
   cache:
     ttl: 30m
+  retry:
+    max-attempts: 3
+    delay: 200ms
