@@ -91,13 +91,29 @@ com.tenpo.challenge
   one — the full test suite is never postponed to the end of development.
 - Development in **small vertical slices**, in this suggested order:
   1. Base endpoint + simple calculation (no cache, no external percentage)
-  2. Mock external service client (random 5–20% percentage)
+  2. Mock external service (random decimal 5–20% percentage), its client, and applying the
+     percentage to the calculation
   3. Percentage cache in Redis with 30-minute TTL
   4. Retries on external service failure
   5. Asynchronous history + persistence in Postgres (with pagination)
   6. Distributed rate limiting (Redis)
   7. Global HTTP error handling
   8. Docker Compose, Swagger, final README
+
+## External percentage service (mock)
+
+- The mock lives inside this same app as `GET /mock/percentage` and returns a random **decimal**
+  percentage between 5.00 and 20.00 (2 decimals) as JSON. It is consumed by `PercentageClient`
+  through `RestClient` over real HTTP, so retries and failures can be exercised realistically.
+  Base URL and timeouts are configurable in `application.yml`.
+- `/mock/**` is not part of the public API: rate limiting (slice 6) and call history (slice 5)
+  apply only to `/api/v1/**`, never to `/mock/**`.
+- `PercentageClient` returns a Vavr `Try<BigDecimal>` and never throws. Vavr enters the pom in
+  this slice.
+- Calculation: `(num1 + num2) * (1 + percentage / 100)`, rounded to 2 decimals with `HALF_UP`
+  only at the end. `CalculationService.calculate` stays a pure function that receives the
+  already-resolved percentage; effects (HTTP call, later cache and retries) live in
+  `PercentageService`.
 
 ## Docker Compose
 
