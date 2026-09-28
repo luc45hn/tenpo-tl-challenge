@@ -215,6 +215,25 @@ com.tenpo.challenge
 - Known limitation for the README: errors Tomcat rejects before Spring sees the request (for
   example a malformed URL) use Boot's default error format.
 
+## API documentation (OpenAPI / Swagger UI)
+
+- Generated with springdoc-openapi, using the 3.x line (the one that targets Spring Boot 4; the
+  2.x line is for Boot 3). Swagger UI is served at `/swagger-ui.html` and the OpenAPI document at
+  `/v3/api-docs`. Both live outside `/api/v1`, so they are neither rate limited nor recorded in
+  the call history; calls made from "Try it out" go through `/api/v1` and are limited and
+  recorded like any other.
+- Everything documented is in English: the purpose of each endpoint, its parameters with their
+  constraints and defaults, the success schema and every error the endpoint can return (400, 429
+  and 503 for the calculation; 400 and 429 for the history; the generic 500 for both), using the
+  `application/problem+json` problem detail schema. Mention the `Retry-After` header of the 429.
+- The mock endpoint (`/mock/percentage`) is not part of the public API and stays out of the
+  documentation.
+- Keep the controllers readable: shared error responses live in a single customizer instead of
+  being repeated on every method. The API title, version and a short description (percentage
+  cache, retries, rate limit) live in one OpenAPI configuration class in `config`.
+- The documented constraints and defaults must come from the real ones (validation annotations
+  and controller defaults), so the documentation cannot drift.
+
 ## Docker Compose
 
 Three services: `postgres`, `redis`, `api` (with healthchecks and corresponding `depends_on`).
