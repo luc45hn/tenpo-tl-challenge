@@ -1,9 +1,17 @@
 spring:
   application:
     name: tenpo-tl-challenge
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      connect-timeout: 1s
+      timeout: 1s
 
 percentage:
   client:
     base-url: http://localhost:8080
     connect-timeout: 1s
     read-timeout: 2s
+  cache:
+    ttl: 30m
