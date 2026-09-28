@@ -46,7 +46,7 @@ Functional summary:
 | Cache / Rate limiting | Redis from day one | Needed anyway to support multiple replicas; avoids a later refactor |
 | HTTP client | `RestClient` (Spring 6.1+) | Modern recommended replacement for `RestTemplate` (in maintenance mode); synchronous, consistent with classic MVC |
 | Retries | Small functional helper that retries a Vavr `Try` (no `spring-retry`, no annotations) | The client returns a `Try` and never throws, so exception-driven annotations do not fit; keeps the style consistent and testable without Spring |
-| History | PostgreSQL + Spring Data JPA | Explicit challenge requirement |
+| History | PostgreSQL + Spring Data JDBC (immutable records, no Hibernate), schema managed with Flyway | PostgreSQL is the explicit challenge requirement; JDBC maps records directly and fits an append-only table and the functional style |
 | API documentation | springdoc-openapi (Swagger UI) | Explicit challenge requirement |
 | Error handling / functional style | **Vavr** (`Try`, `Either`) for failure-prone flows (external call, retries) | Author's background is Scala/functional; avoids nested try/catch |
 
@@ -74,8 +74,9 @@ com.tenpo.challenge
 ├── client          → Mock external service client (PercentageClient)
 ├── cache           → PercentageCache port and its Redis implementation
 ├── retry           → Functional helper that retries a Try-returning operation
-├── repository      → Spring Data JPA (CallHistoryRepository)
-├── model / entity  → JPA entities (CallHistory)
+├── repository      → Spring Data JDBC (CallHistoryRepository)
+├── model / entity  → Immutable records persisted with Spring Data JDBC (CallHistory)
+├── filter          → Servlet filters (call history recording)
 ├── dto             → Request/Response DTOs (records)
 ├── exception       → Custom exceptions + global @ControllerAdvice
 └── ratelimit       → Rate limiting filter/interceptor (backed by Redis)
@@ -152,6 +153,28 @@ com.tenpo.challenge
 - Implemented as a small Spring-free helper that retries a `Try`-returning operation given the
   maximum attempts, a "should retry" predicate and a pause function. The pause is injected so
   tests never sleep. Worst case wait: read timeout times attempts, plus the pauses.
+
+## Call history
+
+- Every call to `/api/v1/**` is recorded, except calls to the history endpoint itself (reading
+  the history never creates history) and anything under `/mock/**`.
+- Each record holds: instant (UTC), HTTP method and path, query string, response status and
+  response body (the result, or the problem detail that was returned).
+- Captured by a servlet filter that wraps the response to read its body (always copy the body
+  back to the real response). The filter runs first in the chain, so responses produced by later
+  filters (rate limiting) and error responses (400, 429, 503, 5xx) are recorded too.
+- Recording is asynchronous and best effort: the record is built in the request thread and only
+  the insert goes to a dedicated executor with a bounded queue. If the queue is full the record is
+  dropped and a WARN is logged; any failure while recording is logged and swallowed. Recording
+  must never slow down or break the endpoint. On shutdown the executor waits for pending records.
+  Known limitation for the README: the queue lives in memory, so a crash can lose pending records
+  (a durable queue would be the production choice).
+- Storage: PostgreSQL with Spring Data JDBC, records as immutable domain objects, schema managed
+  by Flyway migrations. Repository tests use Testcontainers with Postgres, skipped automatically
+  when Docker is not available.
+- Query: `GET /api/v1/history?page=0&size=20`, newest first, maximum size 100 (an invalid page or
+  size is a 400). It responds with the items and the paging metadata (page, size, total elements,
+  total pages) in our own DTO, not Spring's `Page`.
 
 ## Docker Compose
 
