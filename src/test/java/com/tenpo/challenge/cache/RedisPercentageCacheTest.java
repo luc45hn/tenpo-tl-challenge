@@ -33,6 +33,7 @@ class RedisPercentageCacheTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(1);
 
     @Container
+    @SuppressWarnings("resource") // Started and stopped by the Testcontainers JUnit extension
     private static final GenericContainer<?> REDIS = new GenericContainer<>(REDIS_IMAGE).withExposedPorts(REDIS_PORT);
 
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
