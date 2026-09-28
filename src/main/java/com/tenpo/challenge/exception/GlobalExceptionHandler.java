@@ -2,8 +2,10 @@ package com.tenpo.challenge.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -74,6 +76,18 @@ public class GlobalExceptionHandler {
                 "The percentage could not be obtained from the external service. Please try again later.");
         problem.setTitle("Percentage service unavailable");
         return problem;
+    }
+
+    /**
+     * Handles requests over the rate limit, telling the client when to retry.
+     */
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ProblemDetail> handleRateLimitExceeded(RateLimitExceededException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+        problem.setTitle("Rate limit exceeded");
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.retryAfterSeconds()))
+                .body(problem);
     }
 
     private static ProblemDetail invalidParameters(Map<String, String> errors) {

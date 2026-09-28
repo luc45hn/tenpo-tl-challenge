@@ -34,3 +34,7 @@ history:
     core-pool-size: 1
     max-pool-size: 2
     queue-capacity: 500
+
+ratelimit:
+  max-requests: 3
+  window: 1m
