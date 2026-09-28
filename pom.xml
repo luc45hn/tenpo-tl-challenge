@@ -20,6 +20,7 @@
 
     <properties>
         <java.version>21</java.version>
+        <vavr.version>1.0.1</vavr.version>
     </properties>
 
     <dependencies>
@@ -30,6 +31,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vavr</groupId>
+            <artifactId>vavr</artifactId>
+            <version>${vavr.version}</version>
         </dependency>
 
         <dependency>
