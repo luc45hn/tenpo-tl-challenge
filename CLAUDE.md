@@ -40,11 +40,12 @@ Functional summary:
 
 | Item | Decision | Brief rationale |
 |---|---|---|
+| Framework version | Spring Boot 4.1.x (latest patch), Java 21 | Only lines still under OSS support should be used; 3.5.x reached end of OSS support in June 2026. Never pick an unsupported version |
 | Build tool | Maven | More universal so third parties can clone and run with no friction |
 | Concurrency model | Classic Spring MVC (not WebFlux) | The 3 RPM limit makes reactive complexity unnecessary; full justification in the README |
 | Cache / Rate limiting | Redis from day one | Needed anyway to support multiple replicas; avoids a later refactor |
 | HTTP client | `RestClient` (Spring 6.1+) | Modern recommended replacement for `RestTemplate` (in maintenance mode); synchronous, consistent with classic MVC |
-| Retries | `spring-retry` + `@Retryable` | Declarative, cleaner than manual retry logic |
+| Retries | Declarative `@Retryable` (decide at slice 4 whether Spring Framework 7's built-in support makes the `spring-retry` dependency unnecessary; check official docs) | Declarative, cleaner than manual retry logic |
 | History | PostgreSQL + Spring Data JPA | Explicit challenge requirement |
 | API documentation | springdoc-openapi (Swagger UI) | Explicit challenge requirement |
 | Error handling / functional style | **Vavr** (`Try`, `Either`) for failure-prone flows (external call, retries) | Author's background is Scala/functional; avoids nested try/catch |
