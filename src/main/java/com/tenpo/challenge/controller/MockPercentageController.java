@@ -1,6 +1,7 @@
 package com.tenpo.challenge.controller;
 
 import com.tenpo.challenge.dto.PercentageResponse;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -9,8 +10,10 @@ import java.math.BigDecimal;
 import java.util.random.RandomGenerator;
 
 /**
- * Mock of the external percentage service. Not part of the public API.
+ * Mock of the external percentage service. Not part of the public API, so hidden from its
+ * documentation.
  */
+@Hidden
 @RestController
 @RequestMapping("/mock")
 public class MockPercentageController {

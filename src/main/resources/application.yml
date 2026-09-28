@@ -38,3 +38,9 @@ history:
 ratelimit:
   max-requests: 3
   window: 1m
+
+springdoc:
+  default-produces-media-type: application/json
+  # Every error response is declared explicitly (see OpenApiConfig), none inferred from the
+  # exception handlers
+  override-with-generic-response: false
