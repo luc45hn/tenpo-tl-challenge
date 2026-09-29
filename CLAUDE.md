@@ -250,6 +250,9 @@ com.tenpo.challenge
   stack trace) lives in a shared, Spring-free location and is reused wherever a failure is logged
   this way: the percentage cache, the retrier, the call history recorder and the rate limiter.
   Do not duplicate it.
+- A single helper computes the request path without its context path, shared by every filter in
+  the `filter` and `ratelimit` packages that needs to match it against a `PathPattern`. Do not
+  duplicate it.
 
 ## Docker Compose
 
