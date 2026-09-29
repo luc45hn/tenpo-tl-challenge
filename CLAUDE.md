@@ -254,6 +254,10 @@ com.tenpo.challenge
   the `filter` and `ratelimit` packages that needs to match it against a `PathPattern`. Do not
   duplicate it.
 
+- A single helper formats a duration in its largest whole unit for user-facing text (e.g. "30
+  minutes", "1 minute", "200 milliseconds"), shared by the OpenAPI documentation and the rate
+  limit exceeded message. Do not duplicate it.
+
 ## Docker Compose
 
 - Three services: `postgres`, `redis` (with a named volume and `--appendonly yes`, so the last
