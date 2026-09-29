@@ -1,5 +1,6 @@
 package com.tenpo.challenge.exception;
 
+import com.tenpo.challenge.filter.RequestPaths;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.tomcat.util.http.InvalidParameterException;
 import org.slf4j.Logger;
@@ -109,7 +110,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
      */
     @ExceptionHandler(InvalidParameterException.class)
     public ProblemDetail handleMalformedQueryString(InvalidParameterException ex, HttpServletRequest request) {
-        log.debug("Client error 400 handling {} {}: malformed query string", request.getMethod(), pathOf(request));
+        log.debug("Client error 400 handling {} {}: malformed query string", request.getMethod(),
+                RequestPaths.pathWithinApplication(request));
 
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
                 "The query string is malformed: a parameter contains an invalid percent-encoding.");
@@ -214,7 +216,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpected(Exception ex, HttpServletRequest request) {
-        log.error("Unexpected error handling {} {}", request.getMethod(), pathOf(request), ex);
+        log.error("Unexpected error handling {} {}", request.getMethod(), RequestPaths.pathWithinApplication(request),
+                ex);
         return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, UNEXPECTED_ERROR_MESSAGE);
     }
 
@@ -278,16 +281,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
      */
     private static String describe(WebRequest request) {
         return servletRequest(request)
-                .map(servlet -> servlet.getMethod() + " " + pathOf(servlet))
+                .map(servlet -> servlet.getMethod() + " " + RequestPaths.pathWithinApplication(servlet))
                 .orElseGet(() -> request.getDescription(false));
     }
 
     private static String pathOf(WebRequest request) {
-        return servletRequest(request).map(GlobalExceptionHandler::pathOf).orElseGet(() -> request.getDescription(false));
-    }
-
-    private static String pathOf(HttpServletRequest request) {
-        return request.getRequestURI().substring(request.getContextPath().length());
+        return servletRequest(request).map(RequestPaths::pathWithinApplication).orElseGet(() -> request.getDescription(false));
     }
 
     private static Optional<HttpServletRequest> servletRequest(WebRequest request) {
