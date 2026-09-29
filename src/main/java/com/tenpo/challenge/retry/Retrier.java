@@ -8,7 +8,8 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
+
+import static com.tenpo.challenge.exception.Failures.describe;
 
 /**
  * Retries a {@link Try}-returning operation: up to {@code maxAttempts} calls in total, pausing
@@ -92,15 +93,5 @@ public final class Retrier {
             }
             return Try.failure(e);
         }
-    }
-
-    /**
-     * Summarizes a failure in one line (exception and its root cause), without a stack trace.
-     */
-    private static String describe(Throwable failure) {
-        Throwable rootCause = Stream.iterate(failure, Objects::nonNull, Throwable::getCause)
-                .reduce((cause, next) -> next)
-                .orElse(failure);
-        return rootCause == failure ? failure.toString() : failure + " (cause: " + rootCause + ")";
     }
 }

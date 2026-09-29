@@ -4,10 +4,11 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.NestedExceptionUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
+
+import static com.tenpo.challenge.exception.Failures.describe;
 
 /**
  * Stores the percentage in Redis as a single JSON string, e.g.
@@ -48,14 +49,5 @@ public class RedisPercentageCache implements PercentageCache {
         return Try.of(() -> jsonMapper.readValue(json, CachedPercentage.class))
                 .onFailure(e -> log.warn("Ignoring malformed cached percentage: {}", describe(e)))
                 .toOption();
-    }
-
-    /**
-     * Summarizes a failure in one line (exception and its most specific cause) so the WARN log
-     * explains what happened without a full stack trace.
-     */
-    private static String describe(Throwable failure) {
-        Throwable cause = NestedExceptionUtils.getMostSpecificCause(failure);
-        return cause == failure ? failure.toString() : failure + " (cause: " + cause + ")";
     }
 }

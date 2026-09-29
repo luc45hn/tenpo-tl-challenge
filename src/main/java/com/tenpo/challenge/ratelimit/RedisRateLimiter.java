@@ -3,7 +3,6 @@ package com.tenpo.challenge.ratelimit;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.NestedExceptionUtils;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -12,6 +11,8 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+
+import static com.tenpo.challenge.exception.Failures.describe;
 
 /**
  * Sliding window log in Redis: a sorted set with one entry per accepted request, checked and
@@ -66,10 +67,5 @@ public class RedisRateLimiter implements RateLimiter {
     static Duration wholeSecondsAtLeastOne(long micros) {
         long seconds = Math.ceilDiv(micros, 1_000_000L);
         return Duration.ofSeconds(Math.max(1, seconds));
-    }
-
-    private static String describe(Throwable failure) {
-        Throwable cause = NestedExceptionUtils.getMostSpecificCause(failure);
-        return cause == failure ? failure.toString() : failure + " (cause: " + cause + ")";
     }
 }

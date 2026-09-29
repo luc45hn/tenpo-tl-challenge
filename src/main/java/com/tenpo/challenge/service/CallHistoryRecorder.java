@@ -6,9 +6,10 @@ import com.tenpo.challenge.repository.CallHistoryRepository;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.NestedExceptionUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import static com.tenpo.challenge.exception.Failures.describe;
 
 /**
  * Persists call history records asynchronously and best effort.
@@ -33,10 +34,5 @@ public class CallHistoryRecorder {
         Try.run(() -> repository.save(call))
                 .onFailure(e -> log.warn("Could not record call history for {} {}: {}",
                         call.method(), call.path(), describe(e)));
-    }
-
-    private static String describe(Throwable failure) {
-        Throwable cause = NestedExceptionUtils.getMostSpecificCause(failure);
-        return cause == failure ? failure.toString() : failure + " (cause: " + cause + ")";
     }
 }
