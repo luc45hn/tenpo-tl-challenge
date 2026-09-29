@@ -5,6 +5,8 @@ import com.tenpo.challenge.model.CallHistory;
 import com.tenpo.challenge.repository.CallHistoryRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
@@ -28,8 +30,11 @@ import static org.mockito.Mockito.verify;
 
 /**
  * Runs the recorder with its real async executor (one thread, a queue of one) against a mocked
- * repository. Latches make the waits deterministic.
+ * repository. Latches make the waits deterministic. Each test gets a fresh context, and so a fresh
+ * executor with an empty queue: with a shared one, a task still finishing from the previous test
+ * could occupy the single queue slot and get this test's records dropped.
  */
+@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 @SpringJUnitConfig({HistoryExecutorConfig.class, CallHistoryRecorder.class})
 @TestPropertySource(properties = {
         "history.max-body-length=100",
