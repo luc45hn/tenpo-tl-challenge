@@ -1,6 +1,7 @@
 package com.tenpo.challenge.config;
 
 import com.tenpo.challenge.ratelimit.RateLimitProperties;
+import com.tenpo.challenge.util.Durations;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.headers.Header;
@@ -23,7 +24,6 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /**
  * OpenAPI document of the public API. The operations declare their own specific errors (e.g. 400,
@@ -51,8 +51,8 @@ public class OpenApiConfig {
                 (up to %d attempts in total) and, if it still fails, the last cached percentage is used. \
                 The whole API accepts at most %d requests per %s; beyond that it answers 429 with a \
                 Retry-After header. Errors are RFC 9457 problem details (application/problem+json)."""
-                .formatted(quantity(cache.ttl()), retry.maxAttempts(), rateLimit.maxRequests(),
-                        per(rateLimit.window()));
+                .formatted(Durations.quantity(cache.ttl()), retry.maxAttempts(), rateLimit.maxRequests(),
+                        Durations.per(rateLimit.window()));
         return new OpenAPI()
                 .info(new Info()
                         .title("Tenpo Challenge API")
@@ -99,7 +99,7 @@ public class OpenApiConfig {
     private static ApiResponse tooManyRequests(RateLimitProperties rateLimit) {
         return new ApiResponse()
                 .description("Rate limit exceeded: the API accepts at most %d requests per %s in total."
-                        .formatted(rateLimit.maxRequests(), per(rateLimit.window())))
+                        .formatted(rateLimit.maxRequests(), Durations.per(rateLimit.window())))
                 .addHeaderObject(HttpHeaders.RETRY_AFTER, new Header()
                         .description("Seconds to wait before a request can be accepted again.")
                         .schema(new IntegerSchema().minimum(BigDecimal.ONE)));
@@ -141,33 +141,5 @@ public class OpenApiConfig {
                 .sorted(Map.Entry.comparingByKey(Comparator.naturalOrder()))
                 .forEach(entry -> sorted.addApiResponse(entry.getKey(), entry.getValue()));
         return sorted;
-    }
-
-    /**
-     * A duration in its largest whole unit, e.g. "30 minutes", "1 minute", "200 milliseconds".
-     */
-    static String quantity(Duration duration) {
-        record Unit(Duration length, String name) {
-        }
-        return Stream.of(
-                        new Unit(Duration.ofHours(1), "hour"),
-                        new Unit(Duration.ofMinutes(1), "minute"),
-                        new Unit(Duration.ofSeconds(1), "second"),
-                        new Unit(Duration.ofMillis(1), "millisecond"))
-                .filter(unit -> duration.toNanos() % unit.length().toNanos() == 0)
-                .findFirst()
-                .map(unit -> {
-                    long amount = duration.toNanos() / unit.length().toNanos();
-                    return amount + " " + (amount == 1 ? unit.name() : unit.name() + "s");
-                })
-                .orElseGet(duration::toString);
-    }
-
-    /**
-     * A duration after "per", e.g. "minute" (not "1 minute") or "30 seconds".
-     */
-    static String per(Duration duration) {
-        String quantity = quantity(duration);
-        return quantity.startsWith("1 ") ? quantity.substring(2) : quantity;
     }
 }
