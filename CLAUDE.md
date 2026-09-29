@@ -246,6 +246,11 @@ com.tenpo.challenge
   (`management.endpoints.web.exposure.include: health`), used by the container healthcheck. It
   lives outside `/api/v1`, so it is neither rate limited nor recorded in the call history.
 
+- A single `describe(Throwable)` helper (summarizes a failure and its root cause on one line, no
+  stack trace) lives in a shared, Spring-free location and is reused wherever a failure is logged
+  this way: the percentage cache, the retrier, the call history recorder and the rate limiter.
+  Do not duplicate it.
+
 ## Docker Compose
 
 - Three services: `postgres`, `redis` (with a named volume and `--appendonly yes`, so the last
