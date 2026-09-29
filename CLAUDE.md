@@ -265,6 +265,10 @@ com.tenpo.challenge
   default: with Postgres down, the history endpoint and the async recorder's single-threaded
   executor must fail fast rather than hang for half a minute.
 
+- Mockito is configured as a Java agent in the Surefire plugin (not left to self-attach at
+  runtime), since dynamic agent loading is being phased out by the JVM and self-attaching already
+  logs a warning on every test run.
+
 ## Docker Compose
 
 - Three services: `postgres`, `redis` (with a named volume and `--appendonly yes`, so the last
