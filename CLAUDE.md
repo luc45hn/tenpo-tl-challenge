@@ -261,6 +261,10 @@ com.tenpo.challenge
   header value stays in whole seconds and does not use this helper, since it must be an exact,
   machine-parseable number, not user-facing text.
 
+- HikariCP's `connection-timeout` is set explicitly (a few seconds), not left at its ~30s
+  default: with Postgres down, the history endpoint and the async recorder's single-threaded
+  executor must fail fast rather than hang for half a minute.
+
 ## Docker Compose
 
 - Three services: `postgres`, `redis` (with a named volume and `--appendonly yes`, so the last
