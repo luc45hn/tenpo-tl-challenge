@@ -74,6 +74,7 @@ com.tenpo.challenge
 ├── client          → Mock external service client (PercentageClient)
 ├── cache           → PercentageCache port and its Redis implementation
 ├── retry           → Functional helper that retries a Try-returning operation
+├── util            → Small, framework-free formatting helpers shared across packages (Durations)
 ├── repository      → Spring Data JDBC (CallHistoryRepository)
 ├── model / entity  → Immutable records persisted with Spring Data JDBC (CallHistory)
 ├── filter          → Servlet filters (call history recording)
@@ -254,9 +255,11 @@ com.tenpo.challenge
   the `filter` and `ratelimit` packages that needs to match it against a `PathPattern`. Do not
   duplicate it.
 
-- A single helper formats a duration in its largest whole unit for user-facing text (e.g. "30
-  minutes", "1 minute", "200 milliseconds"), shared by the OpenAPI documentation and the rate
-  limit exceeded message. Do not duplicate it.
+- A single helper (`util.Durations`) formats a duration in its largest whole unit for
+  user-facing text (e.g. "1 day", "30 minutes", "1 minute", "200 milliseconds"), shared by the
+  OpenAPI documentation and the rate limit exceeded message. Do not duplicate it. The `Retry-After`
+  header value stays in whole seconds and does not use this helper, since it must be an exact,
+  machine-parseable number, not user-facing text.
 
 ## Docker Compose
 
