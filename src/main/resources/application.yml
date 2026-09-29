@@ -5,6 +5,10 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:challenge}
     username: ${POSTGRES_USER:challenge}
     password: ${POSTGRES_PASSWORD:challenge}
+    hikari:
+      # Fail fast when Postgres is unreachable instead of waiting HikariCP's 30s default
+      # (milliseconds)
+      connection-timeout: 3000
   data:
     redis:
       host: ${REDIS_HOST:localhost}
