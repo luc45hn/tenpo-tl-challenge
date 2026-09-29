@@ -48,7 +48,7 @@ public class CallHistoryFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        PathContainer path = PathContainer.parsePath(pathOf(request));
+        PathContainer path = PathContainer.parsePath(RequestPaths.pathWithinApplication(request));
         return !RECORDED_PATHS.matches(path) || HISTORY_PATHS.matches(path);
     }
 
@@ -79,7 +79,7 @@ public class CallHistoryFilter extends OncePerRequestFilter {
         Try.run(() -> recorder.record(CallHistory.of(
                         calledAt,
                         request.getMethod(),
-                        pathOf(request),
+                        RequestPaths.pathWithinApplication(request),
                         request.getQueryString(),
                         completed ? response.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR.value(),
                         bodyOf(response))))
@@ -114,9 +114,5 @@ public class CallHistoryFilter extends OncePerRequestFilter {
                 .map(MediaType::parseMediaType)
                 .map(MediaType::getCharset)
                 .orElse(StandardCharsets.UTF_8);
-    }
-
-    private static String pathOf(HttpServletRequest request) {
-        return request.getRequestURI().substring(request.getContextPath().length());
     }
 }

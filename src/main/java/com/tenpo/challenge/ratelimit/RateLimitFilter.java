@@ -1,6 +1,7 @@
 package com.tenpo.challenge.ratelimit;
 
 import com.tenpo.challenge.exception.RateLimitExceededException;
+import com.tenpo.challenge.filter.RequestPaths;
 import com.tenpo.challenge.ratelimit.RateLimitDecision.Allowed;
 import com.tenpo.challenge.ratelimit.RateLimitDecision.Rejected;
 import jakarta.servlet.FilterChain;
@@ -39,8 +40,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI().substring(request.getContextPath().length());
-        return !LIMITED_PATHS.matches(PathContainer.parsePath(path));
+        return !LIMITED_PATHS.matches(PathContainer.parsePath(RequestPaths.pathWithinApplication(request)));
     }
 
     @Override
